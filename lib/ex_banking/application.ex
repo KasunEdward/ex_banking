@@ -8,7 +8,7 @@ defmodule ExBanking.Application do
   @impl true
   def start(_type, _args) do
 #    create :user_account ETS table to store account details
-    :ets.new(:user_account, [:set, :protected, :named_table])
+    :ets.new(:user_account, [:set, :public, :named_table])
     children = [
     {ExBanking.AccountSup, []}
     ]
