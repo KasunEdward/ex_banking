@@ -7,9 +7,10 @@ defmodule ExBanking.Application do
 
   @impl true
   def start(_type, _args) do
+#    create :user_account ETS table to store account details
+    :ets.new(:user_account, [:set, :protected, :named_table])
     children = [
-      # Starts a worker by calling: ExBanking.Worker.start_link(arg)
-      # {ExBanking.Worker, arg}
+    {ExBanking.AccountSup, []}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
