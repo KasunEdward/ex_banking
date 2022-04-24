@@ -8,7 +8,7 @@ defmodule ExBanking do
         throw :wrong_arguments
       end
 
-      case :ets.insert_new(:user_account, {user, %{"USD" =>0}}) do
+      case :ets.insert_new(:user_account, {user, %{"USD" => 0}}) do
         true ->
           start_spec = {ExBanking.Account, user}
           DynamicSupervisor.start_child(ExBanking.AccountSup, start_spec)
@@ -27,29 +27,37 @@ defmodule ExBanking do
   }
   def deposit(user, amount, currency) do
     try do
-#      validate arguments
+      #      validate arguments
       if(!is_binary(user) || !(is_integer(amount) || is_float(amount)) || !is_binary(currency)) do
         throw :wrong_arguments
       end
-#      check if user exists
+      #      check if user exists
       if(:ets.lookup(:user_account, user) == []) do
         throw :user_does_not_exist
       end
-#      check user throttle. If throttle exceeds throws error
+      #      check user throttle. If throttle exceeds throws error
       if(check_user_throttle(user) == :not_ok) do
         throw :too_many_requests_to_user
       end
-#      :deposit gen_sever call for particular user
-      GenServer.call(String.to_atom(user), {:deposit, amount,currency})
+      #      :deposit gen_sever call for particular user
+      GenServer.call(String.to_atom(user), {:deposit, amount, currency})
     catch
       error -> {:error, error}
     end
   end
 
-#  private function to check user throttle
+  @spec withdraw(user :: String.t, amount :: number, currency :: String.t) :: {:ok, new_balance :: number} | {
+    :error,
+    :wrong_arguments | :user_does_not_exist | :not_enough_money | :too_many_requests_to_user
+  }
+  def withdraw(user, amount, number, currency) do
+    
+  end
+
+  #  private function to check user throttle
   defp check_user_throttle(user) do
     GenServer.call(String.to_atom(user), {:update_counter})
-    end
+  end
 end
 
 
