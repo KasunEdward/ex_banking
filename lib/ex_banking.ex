@@ -45,4 +45,11 @@ defmodule ExBanking do
       error -> {:error, error}
     end
   end
+
+#  private function to check user throttle
+  defp check_user_throttle(user) do
+    GenServer.call(String.to_atom(user), {:update_counter})
+    end
 end
+
+
