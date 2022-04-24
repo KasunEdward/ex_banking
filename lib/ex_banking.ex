@@ -20,6 +20,29 @@ defmodule ExBanking do
       error -> {:error, error}
     end
   end
+
+  @spec deposit(user :: String.t, amount :: number, currency :: String.t) :: {:ok, new_balance :: number} | {
+    :error,
+    :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user
+  }
+  def deposit(user, amount, currency) do
+    try do
+#      validate arguments
+      if(!is_binary(user) || !(is_integer(amount) || is_float(amount)) || !is_binary(currency)) do
+        throw :wrong_arguments
+      end
+#      check if user exists
+      if(:ets.lookup(:user_account, user) == []) do
+        throw :user_does_not_exist
+      end
+#      check user throttle. If throttle exceeds throws error
+      if(check_user_throttle(user) == :not_ok) do
+        throw :too_many_requests_to_user
+      end
+#      :deposit gen_sever call for particular user
+      GenServer.call(String.to_atom(user), {:deposit, amount,currency})
+    catch
+      error -> {:error, error}
     end
   end
 end
