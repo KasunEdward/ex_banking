@@ -28,7 +28,7 @@ defmodule ExBanking do
   def deposit(user, amount, currency) do
     try do
       #      validate arguments
-      if(!is_binary(user) || !(is_integer(amount) || is_float(amount)) || !is_binary(currency)) do
+      if(!is_binary(user) || !(is_integer(amount) || is_float(amount)) || amount < 0 || !is_binary(currency)) do
         throw :wrong_arguments
       end
       #      check if user exists
@@ -40,7 +40,12 @@ defmodule ExBanking do
         throw :too_many_requests_to_user
       end
       #      :deposit gen_sever call for particular user
-      GenServer.call(String.to_atom(user), {:deposit, amount, currency})
+      case GenServer.call(String.to_atom(user), {:deposit, amount, currency}) do
+        {:ok, new_balance} ->
+          {:ok, new_balance}
+        {:not_ok, error} ->
+          throw error
+      end
     catch
       error -> {:error, error}
     end
@@ -50,8 +55,59 @@ defmodule ExBanking do
     :error,
     :wrong_arguments | :user_does_not_exist | :not_enough_money | :too_many_requests_to_user
   }
-  def withdraw(user, amount, number, currency) do
-    
+  def withdraw(user, amount, currency) do
+    try do
+      #      validate arguments
+      if(!is_binary(user) || !(is_integer(amount) || is_float(amount)) || amount < 0 || !is_binary(currency)) do
+        throw :wrong_arguments
+      end
+      #      check if user exists
+      if(:ets.lookup(:user_account, user) == []) do
+        throw :user_does_not_exist
+      end
+      #      check user throttle. If throttle exceeds throws error
+      if(check_user_throttle(user) == :not_ok) do
+        throw :too_many_requests_to_user
+      end
+      #      :deposit gen_sever call for particular user
+      case GenServer.call(String.to_atom(user), {:deposit, -amount, currency}) do
+        {:ok, new_balance} ->
+          {:ok, new_balance}
+        {:not_ok, error} ->
+          throw error
+      end
+    catch
+      error -> {:error, error}
+    end
+  end
+
+  @spec get_balance(user :: String.t, currency :: String.t) :: {:ok, balance :: number} | {
+    :error,
+    :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user
+  }
+  def get_balance(user, currency) do
+    try do
+      #      validate arguments
+      if(!is_binary(user) || !is_binary(currency)) do
+        throw :wrong_arguments
+      end
+      #      check if user exists
+      if(:ets.lookup(:user_account, user) == []) do
+        throw :user_does_not_exist
+      end
+      #      check user throttle. If throttle exceeds throws error
+      if(check_user_throttle(user) == :not_ok) do
+        throw :too_many_requests_to_user
+      end
+      case GenServer.call(String.to_atom(user), {:get_balance, currency}) do
+        {:ok, balance} ->
+          {:ok, balance}
+        {:not_ok, error} ->
+          throw error
+      end
+    catch
+      error -> {:error, error}
+    end
   end
 
   #  private function to check user throttle
