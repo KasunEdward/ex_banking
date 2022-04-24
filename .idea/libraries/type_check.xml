@@ -10,6 +10,8 @@
     <SOURCES>
       <root url="file://$PROJECT_DIR$/deps/type_check/lib" />
       <root url="file://$PROJECT_DIR$/deps/type_check/lib" />
+      <root url="file://$PROJECT_DIR$/deps/type_check/lib" />
+      <root url="file://$PROJECT_DIR$/deps/type_check/lib" />
     </SOURCES>
   </library>
 </component>
