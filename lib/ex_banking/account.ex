@@ -30,6 +30,17 @@ defmodule ExBanking.Account do
     {:reply, new_balance_for_currency, state}
   end
 
+# update user ops_count. If ops_count ==MAX_OPS_COUNT then return :not_ok
+  def handle_call({:update_counter}, _from, state) do
+    current_ops_count = state.ops_count
+    if(current_ops_count == 3) do
+      {:reply, :not_ok, state}
+      else
+      {:reply, :ok, %{state|ops_count: current_ops_count+1}}
+    end
+
+    end
+
   def handle_call(_msg, _from, state) do
     {:reply, :ok, state}
   end
