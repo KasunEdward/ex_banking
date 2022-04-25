@@ -1,4 +1,7 @@
 defmodule ExBanking do
+  require Logger
+  require Utils
+  require Constants
   @retry_count 5
 
   @spec create_user(user :: String.t) :: :ok | {:error, :wrong_arguments | :user_already_exists}
@@ -13,12 +16,15 @@ defmodule ExBanking do
         true ->
           start_spec = {ExBanking.Account, user}
           DynamicSupervisor.start_child(ExBanking.AccountSup, start_spec)
+          user_log(Constants.evt_success, user, "")
           :ok
         _ ->
           throw :user_already_exists
       end
     catch
-      error -> {:error, error}
+      error ->
+      user_log(Constants.evt_fail, user, error)
+        {:error, error}
     end
   end
 
@@ -41,8 +47,9 @@ defmodule ExBanking do
         throw :too_many_requests_to_user
       end
       #      :deposit gen_sever call for particular user
-      case do_transaction(user, amount, currency) do
+      case do_transaction(user, Utils.format_value(amount), currency) do
         {:ok, new_balance} ->
+
           {:ok, new_balance}
         {:not_ok, error} ->
           throw error
@@ -71,7 +78,7 @@ defmodule ExBanking do
         throw :too_many_requests_to_user
       end
       #      :deposit gen_sever call for particular user
-      case do_transaction(user, -amount, currency) do
+      case do_transaction(user, Utils.format_value(-amount), currency) do
         {:ok, new_balance} ->
           {:ok, new_balance}
         {:not_ok, error} ->
@@ -142,14 +149,14 @@ defmodule ExBanking do
       end
 
       #      :deposit gen_sever call for particular user
-      case do_transaction(from_user, -amount, currency) do
+      case do_transaction(from_user, Utils.format_value(-amount), currency) do
         {:ok, from_user_balance} ->
           case check_user_throttle(to_user) do
             :ok ->
-              {:ok, to_user_balance} = do_transaction(to_user, amount, currency)
+              {:ok, to_user_balance} = do_transaction(to_user, Utils.format_value(amount), currency)
               {:ok, from_user_balance, to_user_balance}
             :not_ok ->
-              spawn(revert_transaction(from_user, amount, currency, @retry_count))
+              spawn(revert_transaction(from_user, Utils.format_value(amount), currency, @retry_count))
               throw :too_many_requests_to_reveiver
           end
         {:not_ok, error} ->
@@ -159,7 +166,7 @@ defmodule ExBanking do
       error -> {:error, error}
     end
   end
-
+  
   #  private function to do transaction (deposit-> +amount | withdraw-> -amount)
   defp do_transaction(user, amount, currency) do
     case GenServer.call(String.to_atom(user), {:deposit, amount, currency}) do
@@ -203,6 +210,19 @@ defmodule ExBanking do
       :not_ok ->
         revert_transaction(user, amount, currency, retry_count - 1)
     end
+  end
+
+  #private function to log user create events
+  defp user_log(event, user, error) do
+    Logger.info("create_user,#{event},user-#{user},error-#{error}")
+  end
+
+  defp balance_log(event,user,currency,balance,error) do
+    Logger.info("get_balance,#{event},user-#{user},currency-#{currency},balance-#{balance},error-#{error}")
+  end
+
+  defp transaction_log(event,user,type,currency,amount,balance,error) do
+    Logger.info("get_balance,#{event},user-#{user},type-#{type},currency-#{currency},amount-#{amount},balance-#{balance},error-#{error}")
   end
 end
 

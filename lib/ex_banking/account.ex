@@ -1,11 +1,12 @@
 defmodule ExBanking.Account do
   @moduledoc false
+  require Utils
 
   use GenServer
 
   @state %{
     user: "",
-    ops_count: 0,
+    ops_count: 0.0,
     max_ops_count: Application.get_env(:ex_banking, :max_ops_count)
   }
 
@@ -23,10 +24,11 @@ defmodule ExBanking.Account do
     [{_, balance}] = :ets.lookup(:user_account, state.user)
     new_balance_for_currency = case balance[currency] do
       nil ->
-        amount
+        Utils.format_value(amount)
       current_balance_for_currency ->
-        amount + current_balance_for_currency
+        Utils.format_value(amount + current_balance_for_currency)
     end
+
     if(new_balance_for_currency < 0) do
       {:reply, {:not_ok, :not_enough_money}, %{state | ops_count: ops_count - 1}}
     else
