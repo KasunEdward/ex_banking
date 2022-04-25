@@ -23,7 +23,7 @@ defmodule ExBanking do
       end
     catch
       error ->
-      user_log(Constants.evt_fail, user, error)
+        user_log(Constants.evt_fail, user, error)
         {:error, error}
     end
   end
@@ -49,13 +49,15 @@ defmodule ExBanking do
       #      :deposit gen_sever call for particular user
       case do_transaction(user, Utils.format_value(amount), currency) do
         {:ok, new_balance} ->
-
+          transaction_log(Constants.evt_success, user, Constants.type_deposit, currency, amount, new_balance, "")
           {:ok, new_balance}
         {:not_ok, error} ->
           throw error
       end
     catch
-      error -> {:error, error}
+      error ->
+        transaction_log(Constants.evt_fail, user, Constants.type_deposit, currency, amount, "", error)
+        {:error, error}
     end
   end
 
@@ -80,12 +82,15 @@ defmodule ExBanking do
       #      :deposit gen_sever call for particular user
       case do_transaction(user, Utils.format_value(-amount), currency) do
         {:ok, new_balance} ->
+          transaction_log(Constants.evt_success, user, Constants.type_withdraw, currency, amount, new_balance, "")
           {:ok, new_balance}
         {:not_ok, error} ->
           throw error
       end
     catch
-      error -> {:error, error}
+      error ->
+        transaction_log(Constants.evt_fail, user, Constants.type_withdraw, currency, amount, "", error)
+        {:error, error}
     end
   end
 
@@ -109,12 +114,15 @@ defmodule ExBanking do
       end
       case get_user_balance(user, currency) do
         {:ok, balance} ->
+          balance_log(Constants.evt_success, user, currency, balance, "")
           {:ok, balance}
         {:not_ok, error} ->
           throw error
       end
     catch
-      error -> {:error, error}
+      error ->
+        balance_log(Constants.evt_fail, user, currency, "", error)
+        {:error, error}
     end
   end
 
@@ -154,6 +162,16 @@ defmodule ExBanking do
           case check_user_throttle(to_user) do
             :ok ->
               {:ok, to_user_balance} = do_transaction(to_user, Utils.format_value(amount), currency)
+              send_log(
+                Constants.evt_success,
+                from_user,
+                to_user,
+                currency,
+                amount,
+                from_user_balance,
+                to_user_balance,
+                ""
+              )
               {:ok, from_user_balance, to_user_balance}
             :not_ok ->
               spawn(revert_transaction(from_user, Utils.format_value(amount), currency, @retry_count))
@@ -163,10 +181,12 @@ defmodule ExBanking do
           throw error
       end
     catch
-      error -> {:error, error}
+      error ->
+        send_log(Constants.evt_fail, from_user, to_user, currency, amount, "", "", error)
+        {:error, error}
     end
   end
-  
+
   #  private function to do transaction (deposit-> +amount | withdraw-> -amount)
   defp do_transaction(user, amount, currency) do
     case GenServer.call(String.to_atom(user), {:deposit, amount, currency}) do
@@ -212,17 +232,31 @@ defmodule ExBanking do
     end
   end
 
-  #private function to log user create events
+  #private functions for logging
   defp user_log(event, user, error) do
     Logger.info("create_user,#{event},user-#{user},error-#{error}")
   end
 
-  defp balance_log(event,user,currency,balance,error) do
+  defp balance_log(event, user, currency, balance, error) do
     Logger.info("get_balance,#{event},user-#{user},currency-#{currency},balance-#{balance},error-#{error}")
   end
 
-  defp transaction_log(event,user,type,currency,amount,balance,error) do
-    Logger.info("get_balance,#{event},user-#{user},type-#{type},currency-#{currency},amount-#{amount},balance-#{balance},error-#{error}")
+  defp transaction_log(event, user, type, currency, amount, balance, error) do
+    Logger.info(
+      "get_balance,#{event},user-#{user},type-#{type},currency-#{currency},amount-#{amount},balance-#{balance},error-#{
+        error
+      }"
+    )
+  end
+
+  defp send_log(event, from_user, to_user, currency, amount, from_user_balance, to_user_balance, error) do
+    Logger.info(
+      "send,#{event},from_user-#{from_user},to_user-#{to_user},currency-#{currency},amount-#{
+        amount
+      },from_user_balance-#{from_user_balance},to_user_balance-#{to_user_balance},error-#{
+        error
+      }"
+    )
   end
 end
 
