@@ -1,5 +1,6 @@
 defmodule ExBanking do
   @retry_count 5
+
   @spec create_user(user :: String.t) :: :ok | {:error, :wrong_arguments | :user_already_exists}
   def create_user(user) do
     try do
@@ -198,7 +199,7 @@ defmodule ExBanking do
     case check_user_throttle(user) do
       :ok ->
         {:ok, balance} = do_transaction(user, amount, currency)
-        IO.puts("revert transaction. user-#{user}, currency-#{currency}, amount-#{amount}")
+        IO.puts("revert transaction. user-#{user}, currency-#{currency}, balance-#{balance}")
       :not_ok ->
         revert_transaction(user, amount, currency, retry_count - 1)
     end

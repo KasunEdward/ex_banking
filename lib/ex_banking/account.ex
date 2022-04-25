@@ -3,14 +3,17 @@ defmodule ExBanking.Account do
 
   use GenServer
 
-  @state %{user: "", ops_count: 0}
+  @state %{
+    user: "",
+    ops_count: 0,
+    max_ops_count: Application.get_env(:ex_banking, :max_ops_count)
+  }
 
   def start_link(user_name) do
     GenServer.start_link(__MODULE__, user_name, name: String.to_atom(user_name))
   end
 
   def init(user_name) do
-    IO.puts user_name
     state = @state
     {:ok, %{state | user: user_name}}
   end
@@ -48,7 +51,7 @@ defmodule ExBanking.Account do
   # update user ops_count. If ops_count ==MAX_OPS_COUNT then return :not_ok
   def handle_call({:update_counter}, _from, state) do
     current_ops_count = state.ops_count
-    if(current_ops_count == 3) do
+    if(current_ops_count == state.max_ops_count) do
       {:reply, :not_ok, state}
     else
       {:reply, :ok, %{state | ops_count: current_ops_count + 1}}
